@@ -1,7 +1,5 @@
 # Terrafix
 
-Moved to <https://github.com/deemp/flakes>
-
 Writing in Terraform [configuration syntax](https://www.terraform.io/language/syntax/configuration) often violates the [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) principle due to lack of named types and other features. Let's **fix** it!
 
 This repo contains a `Nix` [eDSL](https://wiki.haskell.org/Embedded_domain_specific_language) which can be translated into [HCL](https://github.com/hashicorp/hcl), a language used by [Terraform](https://www.terraform.io/). In other words, we can use the power of Nix to generate understandable HCL expressions.
