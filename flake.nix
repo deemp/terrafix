@@ -22,10 +22,8 @@
         devShells.default = mkShell {
           packages = [ ];
           commands =
-            (mkRunCommands "test" tests)
-            ++
-            (mkRunCommands "tf-tools" tfTools.packages)
-          ;
+            mkRunCommands "test" tests
+            ++ mkRunCommands "tf-tools" tfTools.packages;
         };
       in
       {
