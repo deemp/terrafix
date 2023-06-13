@@ -19,8 +19,7 @@
         inherit (inputs.codium.configs.${system}) extensions extensionsCommon settingsNix settingsCommon;
         inherit (inputs.vscode-extensions.extensions.${system}) vscode-marketplace open-vsx;
         inherit (inputs.devshell.functions.${system}) mkCommands mkRunCommands mkRunCommandsDir mkShell;
-        inherit (inputs.workflows.functions.${system}) writeWorkflow;
-        inherit (inputs.workflows.configs.${system}) nixCI;
+        inherit (inputs.workflows.functions.${system}) writeWorkflow nixCIDir;
         inherit (inputs.flakes-tools.functions.${system}) mkFlakesTools;
 
         packages = {
@@ -48,7 +47,7 @@
           # --- GH Actions
 
           # A script to write GitHub Actions workflow file into `.github/ci.yaml`
-          writeWorkflows = writeWorkflow "ci" nixCI;
+          writeWorkflows = writeWorkflow "ci" (nixCIDir "nix-dev/");
         };
 
         tools = [ pkgs.terraform pkgs.terraform-ls ];
