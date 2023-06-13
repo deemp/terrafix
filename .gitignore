@@ -5,3 +5,4 @@ result
 .terraform*
 tf2nix
 *.tf.nix
+.vscode

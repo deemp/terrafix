@@ -1,16 +1,64 @@
-name: CI
-
-on:
-  schedule:
-    # * is a special character in YAML so you have to quote this string
-    # https://crontab.guru/#30_5,17_*_*_*
-    - cron: "0 0 * * *"
-  pull_request:
-  push:
-  workflow_dispatch:
-
 jobs:
-  ci:
-    name: CI
-    uses: deemp/workflows/.github/workflows/nix-ci.yaml@main
-    secrets: inherit
+  nixCI:
+    name: Nix CI
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v3
+      - name: Install Nix
+        uses: cachix/install-nix-action@v20
+        with:
+          extra_nix_config: "access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}\nsubstituters = https://cache.nixos.org/ https://cache.iog.io https://nix-community.cachix.org https://deemp.cachix.org \ntrusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= deemp.cachix.org-1:9shDxyR2ANqEPQEEYDL/xIOnoPwxHot21L5fiZnFL18=\nstore = ${{ matrix.store }}\nkeep-outputs = true\nkeep-derivations = true\n"
+          install_url: https://releases.nixos.org/nix/nix-2.16.1/install
+      - name: Restore and cache Nix store
+        uses: actions/cache@v3.3.0
+        with:
+          key: ${{ runner.os }}-nix-${{ hashfiles('./flake.nix', './flake.lock') }}-cachix
+          path: ${{ matrix.store }}
+          restore-keys: |
+            ${{ runner.os }}-nix-${{ hashfiles('./flake.nix', './flake.lock') }}-cachix
+            ${{ runner.os }}-nix-
+      - if: matrix.os == 'ubuntu-20.04'
+        name: Config git for github-actions
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+      - if: matrix.os == 'ubuntu-20.04'
+        name: Update flake locks
+        run: |
+          git pull --rebase --autostash
+
+          nix build .#updateLocks
+          nix run .#updateLocks
+
+          git commit -a -m "action: Update flake locks" && git push || echo ""
+      - name: Log in to Cachix
+        run: |
+          nix build nixpkgs#cachix
+          nix run nixpkgs#cachix -- authtoken ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - env:
+          CACHIX_CACHE: ${{ secrets.CACHIX_CACHE }}
+        name: Push flakes to Cachix
+        run: |
+          nix build .#pushToCachix
+          nix run .#pushToCachix
+      - name: Collect garbage in /nix/store
+        run: nix store gc
+    strategy:
+      matrix:
+        include:
+          - os: macos-11
+            store: auto
+          - os: macos-12
+            store: auto
+          - os: ubuntu-20.04
+            store: /home/runner/nix
+          - os: ubuntu-22.04
+            store: /home/runner/nix
+name: Nix CI
+"on":
+  pull_request: {}
+  push: {}
+  schedule:
+    - cron: 0 0 * * *
+  workflow_dispatch: {}

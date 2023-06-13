@@ -351,8 +351,41 @@ There are some HCL constructs that aren't yet supported. To name a few:
 
 ## Contribute
 
+### Issues and PRs
+
 [issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/about-issues) and [Pull requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requestsgit) are welcome! E.g. you may submit a missing language feature request or implementation.
 
-## Substituters and keys
+### Prerequisites
 
-There are `extra-trusted-public-keys`, `extra-trusted-public-keys` in [flake.nix](./flake.nix). If a substituter like `cachix` fails, comment out the lines containing its address
+See these for additional info:
+
+- [codium-generic](https://github.com/deemp/flakes/tree/main/templates/codium/generic#readme) - info just about `VSCodium` and extensions.
+- [nix-vscode-extensions](https://github.com/nix-community/nix-vscode-extensions) (pinned [here](https://github.com/deemp/flakes/blob/main/source-flake/vscode-extensions/flake.nix)).
+- [Prerequisites](https://github.com/deemp/flakes#prerequisites).
+- [Troubleshooting](https://github.com/deemp/flakes/blob/main/README/Troubleshooting.md)
+
+### Code
+
+1. [Install Nix](https://github.com/deemp/flakes/blob/main/README/InstallNix.md).
+1. [Install direnv](https://github.com/deemp/flakes/blob/main/README/InstallNix.md#direnv).
+1. Run `devShells` in this repo directory.
+
+   - Option 1: run `direnv allow` to use `direnv`.
+   - Option 2: run `devShells` manually.
+
+      ```console
+      nix develop nix-dev/
+      nix develop
+      ```
+
+1. (Optionally) Start `VSCodium`.
+
+    ```console
+    nix run nix-dev/#codium .
+    ```
+
+## Configs
+
+- [.markdownlint.jsonc](./.markdownlint.jsonc) - for `markdownlint` from the extension `davidanson.vscode-markdownlint`
+- [.envrc](./.envrc) - for [direnv](https://github.com/direnv/direnv).
+- [ci.yaml](.github/workflows/ci.yaml) - a generated `GitHub Actions` workflow. See [workflows](https://github.com/deemp/flakes/tree/main/workflows).

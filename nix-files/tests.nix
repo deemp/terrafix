@@ -33,6 +33,7 @@ let
 
   testCases = mkShellApp {
     name = "run-tests";
+    description = "Run all tests";
     text = concatStringsNewline (
       mapAttrsToList
         (
