@@ -7,7 +7,7 @@
       inputs_ =
         let flakes = inputs.flakes.flakes; in
         {
-          inherit (flakes.source-flake) flake-utils nixpkgs;
+          inherit (flakes.source-flake) flake-utils nixpkgs formatter;
           inherit (flakes) devshell drv-tools;
           inherit flakes;
         };
@@ -40,7 +40,10 @@
           {
             inherit (tfTools) lib;
             inherit packages hcl devShells;
-          });
+          })
+        // {
+          inherit (inputs) formatter;
+        };
     in
     outputs;
 

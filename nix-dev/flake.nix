@@ -47,7 +47,7 @@
               # --- Flakes ---
 
               # Scripts that can be used in CI
-              inherit (mkFlakesTools { dirs = [ "." nix-dev ]; root = ./.; }) updateLocks saveFlakes;
+              inherit (mkFlakesTools { dirs = [ "." nix-dev ]; root = ./.; }) updateLocks saveFlakes format;
 
               # --- GH Actions
 
@@ -70,7 +70,7 @@
               commands =
                 mkCommands "tools" tools
                 ++ mkRunCommandsDir nix-dev "ide" { "codium ." = packages.codium; inherit (packages) writeSettings; }
-                ++ mkRunCommandsDir nix-dev "infra" { inherit (packages) updateLocks saveFlakes writeWorkflows; }
+                ++ mkRunCommandsDir nix-dev "infra" { inherit (packages) updateLocks saveFlakes format writeWorkflows; }
               ;
             };
           in
