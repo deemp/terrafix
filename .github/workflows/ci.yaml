@@ -1,60 +1,74 @@
 jobs:
   nixCI:
     name: Nix CI
+    permissions:
+      contents: write
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout this repo
         uses: actions/checkout@v3
       - name: Install Nix
-        uses: cachix/install-nix-action@v20
+        uses: nixbuild/nix-quick-install-action@v25
         with:
-          extra_nix_config: "access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}\nsubstituters = https://cache.nixos.org/ https://cache.iog.io https://nix-community.cachix.org https://deemp.cachix.org \ntrusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= deemp.cachix.org-1:9shDxyR2ANqEPQEEYDL/xIOnoPwxHot21L5fiZnFL18=\nstore = ${{ matrix.store }}\nkeep-outputs = true\nkeep-derivations = true\n"
-          install_url: https://releases.nixos.org/nix/nix-2.16.1/install
+          nix_conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+            substituters = https://cache.nixos.org/ https://nix-community.cachix.org https://cache.iog.io https://deemp.cachix.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= deemp.cachix.org-1:9shDxyR2ANqEPQEEYDL/xIOnoPwxHot21L5fiZnFL18=
+            keep-outputs = true
       - name: Restore and cache Nix store
-        uses: actions/cache@v3.3.0
+        uses: nix-community/cache-nix-action@v1
         with:
-          key: ${{ runner.os }}-nix-${{ hashfiles('./flake.nix', './flake.lock') }}-cachix
-          path: ${{ matrix.store }}
+          key: nix-${{ matrix.os }}-cachix-${{ hashfiles('**/flake.nix', '**/flake.lock') }}
           restore-keys: |
-            ${{ runner.os }}-nix-${{ hashfiles('./flake.nix', './flake.lock') }}-cachix
-            ${{ runner.os }}-nix-
-      - if: matrix.os == 'ubuntu-20.04'
+            nix-${{ matrix.os }}-cachix-
+      - name: Remove old cache profiles
+        run: rm -rf /nix/var/nix/profiles/cache
+      - if: matrix.os == 'ubuntu-22.04'
         name: Config git for github-actions
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-      - if: matrix.os == 'ubuntu-20.04'
+          git config --global user.name github-actions
+          git config --global user.email github-actions@github.com
+      - if: matrix.os == 'ubuntu-22.04'
         name: Update flake locks
-        run: |
+        run: |-
           git pull --rebase --autostash
 
-          nix build nix-dev/#updateLocks
+          nix profile install nix-dev/#updateLocks
           nix run nix-dev/#updateLocks
 
-          git commit -a -m "action: Update flake locks" && git push || echo ""
-      - name: Log in to Cachix
-        run: |
-          nix build nixpkgs#cachix
-          nix run nixpkgs#cachix -- authtoken ${{ secrets.CACHIX_AUTH_TOKEN }}
+          git add .
+          git commit \
+            -m "action: Update flake locks" \
+            || echo "commit failed!"
+          git push
       - env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
           CACHIX_CACHE: ${{ secrets.CACHIX_CACHE }}
         name: Push flakes to Cachix
-        run: |
-          nix build nix-dev/#pushToCachix
+        run: |-
+          nix profile install nix-dev/#pushToCachix
           nix run nix-dev/#pushToCachix
-      - name: Collect garbage in /nix/store
-        run: nix store gc
     strategy:
       matrix:
-        include:
-          - os: macos-11
-            store: auto
-          - os: macos-12
-            store: auto
-          - os: ubuntu-20.04
-            store: /home/runner/nix
-          - os: ubuntu-22.04
-            store: /home/runner/nix
+        os:
+          - macos-11
+          - macos-12
+          - ubuntu-20.04
+          - ubuntu-22.04
+  purgeCache:
+    name: Purge cache
+    needs: nixCI
+    permissions:
+      actions: write
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Purge cache
+        uses: deemp/purge-cache@v1
+        with:
+          accessed: true
+          created: true
+          debug: true
+          max-age: 172800
 name: Nix CI
 "on":
   pull_request: {}
