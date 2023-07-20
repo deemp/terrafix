@@ -465,18 +465,19 @@ let
   # construct blocks and arguments from a set
   mkBlocks = mkBlocks_ { };
   mkBlocks_ = __@{ ... }: attrs@{ ... }:
-    let as =
-      mapAttrs
-        (name: val@{ ... }:
-          val // {
-            __toString = self:
-              let infix = if hasAttr KW.__isArgument val then " = " else " "; in
-              concatStringsSep "\n\n" (
-                map (str: "${name}${infix}${str}")
-                  (toStringBlock val true)
-              );
-          })
-        attrs;
+    let
+      as =
+        mapAttrs
+          (name: val@{ ... }:
+            val // {
+              __toString = self:
+                let infix = if hasAttr KW.__isArgument val then " = " else " "; in
+                concatStringsSep "\n\n" (
+                  map (str: "${name}${infix}${str}")
+                    (toStringBlock val true)
+                );
+            })
+          attrs;
     in
     as // (
       let
@@ -494,12 +495,12 @@ let
                 }
                 // (ifHasAttr KW.resource as (mkAccessors (filterOutNonTypes as.resource)))
               );
-          # Set -> (Set -> Set) -> Set
-          __functor = self: x:
-            (
-              y: y // { __toString = self_: "${self}\n\n${y}"; }
-            ) (mkBlocks_ self.__ (x self.__));
-        };
+            # Set -> (Set -> Set) -> Set
+            __functor = self: x:
+              (
+                y: y // { __toString = self_: "${self}\n\n${y}"; }
+              ) (mkBlocks_ self.__ (x self.__));
+          };
       in
       std
     );
