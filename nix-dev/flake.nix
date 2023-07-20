@@ -1,11 +1,10 @@
 {
-  inputs.flakes.url = "github:deemp/flakes";
-
+  inputs = { };
   outputs =
     inputs:
     let
       inputs_ =
-        let flakes = inputs.flakes.flakes; in
+        let flakes = (import ../.).outputs.inputs.flakes; in
         {
           inherit (flakes.source-flake) flake-utils nixpkgs;
           inherit (flakes) codium devshell flakes-tools workflows;
@@ -16,7 +15,6 @@
       outputs_ =
         inputs__:
         let inputs = inputs_ // inputs__; in
-
         inputs.flake-utils.lib.eachDefaultSystem
           (system:
           let
@@ -26,6 +24,8 @@
             inherit (inputs.devshell.lib.${system}) mkCommands mkRunCommands mkRunCommandsDir mkShell;
             inherit (inputs.workflows.lib.${system}) writeWorkflow nixCI;
             inherit (inputs.flakes-tools.lib.${system}) mkFlakesTools;
+
+            nix-dev = "nix-dev/";
 
             packages = {
               # --- IDE ---
@@ -47,12 +47,20 @@
               # --- Flakes ---
 
               # Scripts that can be used in CI
-              inherit (mkFlakesTools { dirs = [ "." "nix-dev" ]; root = ./.; }) updateLocks pushToCachix;
+              inherit (mkFlakesTools { dirs = [ "." nix-dev ]; root = ./.; }) updateLocks saveFlakes;
 
               # --- GH Actions
 
               # A script to write GitHub Actions workflow file into `.github/ci.yaml`
-              writeWorkflows = writeWorkflow "ci" (nixCI { dir = "nix-dev/"; });
+              writeWorkflows = writeWorkflow "ci" (nixCI {
+                dir = nix-dev;
+                cacheNixArgs = {
+                  linuxGCEnabled = true;
+                  linuxMaxStoreSize = 5000000000;
+                  macosGCEnabled = true;
+                  macosMaxStoreSize = 5000000000;
+                };
+              });
             };
 
             tools = [ pkgs.terraform pkgs.terraform-ls ];
@@ -61,9 +69,9 @@
               packages = tools;
               commands =
                 mkCommands "tools" tools
-                ++ mkRunCommands "ide" { "codium ." = packages.codium; inherit (packages) writeSettings; }
-                ++ mkRunCommandsDir "nix-dev" "infra" { inherit (packages) updateLocks pushToCachix writeWorkflows; }
-                ++ [{ name = "nix develop"; help = "Run project devshell"; }];
+                ++ mkRunCommandsDir nix-dev "ide" { "codium ." = packages.codium; inherit (packages) writeSettings; }
+                ++ mkRunCommandsDir nix-dev "infra" { inherit (packages) updateLocks saveFlakes writeWorkflows; }
+              ;
             };
           in
           {

@@ -1,7 +1,7 @@
 { pkgs, system, drv-tools }:
 let
-  inherit (drv-tools.functions.${system}) mkShellApp framedBrackets concatStringsNewline mkBin withMan;
-  man = drv-tools.configs.${system}.man;
+  inherit (drv-tools.lib.${system}) mkShellApp framedBrackets concatStringsNewline mkBin withMan;
+  man = drv-tools.lib.${system}.man;
   inherit (pkgs.lib.strings) escapeShellArg concatMapStringsSep;
   inherit (pkgs.lib.lists) unique;
   inherit (builtins) isList dirOf map isString;
@@ -134,8 +134,16 @@ let
       '');
 in
 {
-  functions = {
-    inherit writeTF writeTFs writeTfvars writeFiles_ writeFiles tf2nix;
+  lib = {
+    inherit
+      convertTf2Nix
+      tf2nix
+      writeFiles
+      writeFiles_
+      writeTF
+      writeTFs
+      writeTfvars
+      ;
   };
   packages = {
     inherit convertTf2Nix;

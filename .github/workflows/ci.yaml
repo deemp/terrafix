@@ -19,6 +19,10 @@ jobs:
         uses: nix-community/cache-nix-action@v1
         with:
           key: nix-${{ matrix.os }}-cachix-${{ hashfiles('**/flake.nix', '**/flake.lock') }}
+          linux-gc-enabled: true
+          linux-max-store-size: 5000000000
+          macos-gc-enabled: true
+          macos-max-store-size: 5000000000
           restore-keys: |
             nix-${{ matrix.os }}-cachix-
       - name: Remove old cache profiles
@@ -28,6 +32,11 @@ jobs:
         run: |
           git config --global user.name github-actions
           git config --global user.email github-actions@github.com
+      - if: matrix.os == 'ubuntu-22.04'
+        name: Format Nix files
+        run: |-
+          nix profile install nix-dev/#format
+          nix run nix-dev/#format
       - if: matrix.os == 'ubuntu-22.04'
         name: Update flake locks
         run: |-
@@ -41,13 +50,10 @@ jobs:
             -m "action: Update flake locks" \
             || echo "commit failed!"
           git push
-      - env:
-          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          CACHIX_CACHE: ${{ secrets.CACHIX_CACHE }}
-        name: Push flakes to Cachix
+      - name: Save flakes
         run: |-
-          nix profile install nix-dev/#pushToCachix
-          nix run nix-dev/#pushToCachix
+          nix profile install nix-dev/#saveFlakes
+          nix run nix-dev/#saveFlakes
     strategy:
       matrix:
         os:

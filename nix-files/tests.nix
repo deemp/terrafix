@@ -1,9 +1,9 @@
 { pkgs, system, drv-tools }:
 let
-  inherit (drv-tools.functions.${system})
+  inherit (drv-tools.lib.${system})
     mkShellApp mkBin framedBrackets framedBrackets_ concatStringsNewline;
   inherit (pkgs.lib.attrsets) mapAttrsToList;
-  inherit ((import ./tf-tools.nix { inherit pkgs system drv-tools; }).functions) writeFiles tf2nix;
+  inherit ((import ./tf-tools.nix { inherit pkgs system drv-tools; }).lib) writeFiles tf2nix;
 
   testData = (import ./test-data.nix { inherit pkgs system; });
 
