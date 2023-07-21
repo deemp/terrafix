@@ -19,17 +19,17 @@ jobs:
       - name: Restore and cache Nix store
         uses: nix-community/cache-nix-action@v1
         with:
-          key: nix-${{ matrix.os }}-cachix-${{ hashfiles('**/flake.nix', '**/flake.lock') }}
+          key: nix-${{ matrix.os }}-job-${{ hashfiles('**/flake.nix', '**/flake.lock') }}
           linux-gc-enabled: true
           linux-max-store-size: 5000000000
           macos-gc-enabled: true
           macos-max-store-size: 5000000000
           restore-keys: |
-            nix-${{ matrix.os }}-cachix-
+            nix-${{ matrix.os }}-job-
       - name: Remove old cache profiles
         run: rm -rf /nix/var/nix/profiles/cache
       - if: matrix.os == 'ubuntu-22.04'
-        name: Config git for github-actions
+        name: Configure git for github-actions
         run: |
           git config --global user.name github-actions
           git config --global user.email github-actions@github.com
@@ -41,15 +41,21 @@ jobs:
       - if: matrix.os == 'ubuntu-22.04'
         name: Update flake locks
         run: |-
-          git pull --rebase --autostash
-
           nix profile install nix-dev/#updateLocks
           nix run nix-dev/#updateLocks
+      - if: matrix.os == 'ubuntu-22.04'
+        name: Commit & Push
+        run: |-
+          git pull --rebase --autostash
 
           git add .
+
           git commit \
-            -m "action: Update flake locks" \
+            -m "action" \
+            -m "Format Nix files" \
+            -m "Update flake locks" \
             || echo "commit failed!"
+
           git push
       - name: Save flakes
         run: |-
