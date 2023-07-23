@@ -1,86 +1,73 @@
 {
   inputs = { };
-  outputs =
-    inputs:
-    let
-      inputs_ =
-        let flakes = (import ../.).outputs.inputs.flakes; in
-        {
-          inherit (flakes.source-flake) flake-utils nixpkgs;
-          inherit (flakes) codium devshell flakes-tools workflows;
-        };
+  outputs = inputs:
+    let flakes = (import ../.).outputs.inputs.flakes; in
+    flakes.makeFlake {
+      inputs = { inherit (flakes.all) nixpkgs codium devshell flakes-tools workflows; };
+      perSystem = { inputs, system }:
+        let
+          pkgs = inputs.nixpkgs.legacyPackages.${system};
+          inherit (inputs.codium.lib.${system}) mkCodium writeSettingsJSON;
+          inherit (inputs.codium.lib.${system}) extensionsCommon settingsCommonNix extensions;
+          inherit (inputs.devshell.lib.${system}) mkCommands mkRunCommands mkRunCommandsDir mkShell;
+          inherit (inputs.workflows.lib.${system}) writeWorkflow nixCI;
+          inherit (inputs.flakes-tools.lib.${system}) mkFlakesTools;
 
-      outputs = outputs_ { } // { inputs = inputs_; outputs = outputs_; };
+          nix-dev = "nix-dev/";
 
-      outputs_ =
-        inputs__:
-        let inputs = inputs_ // inputs__; in
-        inputs.flake-utils.lib.eachDefaultSystem
-          (system:
-          let
-            pkgs = inputs.nixpkgs.legacyPackages.${system};
-            inherit (inputs.codium.lib.${system}) mkCodium writeSettingsJSON;
-            inherit (inputs.codium.lib.${system}) extensionsCommon settingsCommonNix extensions;
-            inherit (inputs.devshell.lib.${system}) mkCommands mkRunCommands mkRunCommandsDir mkShell;
-            inherit (inputs.workflows.lib.${system}) writeWorkflow nixCI;
-            inherit (inputs.flakes-tools.lib.${system}) mkFlakesTools;
+          packages = {
+            # --- IDE ---
 
-            nix-dev = "nix-dev/";
+            # This part can be removed if you don't use `VSCodium`
+            # We compose `VSCodium` with dev tools
+            # This is to let `VSCodium` run on its own, outside of a devshell
+            codium = mkCodium {
+              # We use the common extensions
+              extensions = extensionsCommon // {
+                # Next, we include the extensions from the pre-defined attrset
+                inherit (extensions) terraform;
+              };
+            };
 
-            packages = {
-              # --- IDE ---
+            # a script to write `.vscode/settings.json`
+            writeSettings = writeSettingsJSON settingsCommonNix;
 
-              # This part can be removed if you don't use `VSCodium`
-              # We compose `VSCodium` with dev tools
-              # This is to let `VSCodium` run on its own, outside of a devshell
-              codium = mkCodium {
-                # We use the common extensions
-                extensions = extensionsCommon // {
-                  # Next, we include the extensions from the pre-defined attrset
-                  inherit (extensions) terraform;
+            # --- Flakes ---
+
+            # Scripts that can be used in CI
+            inherit (mkFlakesTools { dirs = [ "." nix-dev ]; root = ./.; }) updateLocks saveFlakes format;
+
+            # --- GH Actions
+
+            # A script to write GitHub Actions workflow file into `.github/ci.yaml`
+            writeWorkflows = writeWorkflow "ci" (nixCI {
+              jobArgs = {
+                dir = nix-dev;
+                cacheNixArgs = {
+                  linuxGCEnabled = true;
+                  linuxMaxStoreSize = 5000000000;
+                  macosGCEnabled = true;
+                  macosMaxStoreSize = 5000000000;
                 };
               };
+            });
+          };
 
-              # a script to write `.vscode/settings.json`
-              writeSettings = writeSettingsJSON settingsCommonNix;
+          tools = [ pkgs.terraform pkgs.terraform-ls ];
 
-              # --- Flakes ---
-
-              # Scripts that can be used in CI
-              inherit (mkFlakesTools { dirs = [ "." nix-dev ]; root = ./.; }) updateLocks saveFlakes format;
-
-              # --- GH Actions
-
-              # A script to write GitHub Actions workflow file into `.github/ci.yaml`
-              writeWorkflows = writeWorkflow "ci" (nixCI {
-                jobArgs = {
-                  dir = nix-dev;
-                  cacheNixArgs = {
-                    linuxGCEnabled = true;
-                    linuxMaxStoreSize = 5000000000;
-                    macosGCEnabled = true;
-                    macosMaxStoreSize = 5000000000;
-                  };
-                };
-              });
-            };
-
-            tools = [ pkgs.terraform pkgs.terraform-ls ];
-
-            devShells.default = mkShell {
-              packages = tools;
-              commands =
-                mkCommands "tools" tools
-                ++ mkRunCommandsDir nix-dev "ide" { "codium ." = packages.codium; inherit (packages) writeSettings; }
-                ++ mkRunCommandsDir nix-dev "infra" { inherit (packages) updateLocks saveFlakes format writeWorkflows; }
-              ;
-            };
-          in
-          {
-            inherit packages devShells;
-          });
-    in
-    outputs;
+          devShells.default = mkShell {
+            packages = tools;
+            commands =
+              mkCommands "tools" tools
+              ++ mkRunCommandsDir nix-dev "ide" { "codium ." = packages.codium; inherit (packages) writeSettings; }
+              ++ mkRunCommandsDir nix-dev "infra" { inherit (packages) updateLocks saveFlakes format writeWorkflows; }
+            ;
+          };
+        in
+        {
+          inherit packages devShells;
+        };
+    };
 
   nixConfig = {
     extra-trusted-substituters = [

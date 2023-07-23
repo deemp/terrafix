@@ -1,51 +1,36 @@
 {
   inputs.flakes.url = "github:deemp/flakes";
+  outputs = inputs:
+    let flakes = inputs.flakes; in
+    flakes.makeFlake {
+      inputs = {
+        inherit (flakes.all) nixpkgs formatter devshell drv-tools;
+        inherit flakes;
+      };
+      perSystem = { inputs, system }:
+        let
+          pkgs = inputs.nixpkgs.legacyPackages.${system};
+          inherit (inputs.devshell.lib.${system}) mkCommands mkRunCommands mkRunCommandsDir mkShell;
 
-  outputs =
-    inputs:
-    let
-      inputs_ =
-        let flakes = inputs.flakes.flakes; in
+          hcl = import ./nix-files/hcl.nix;
+          tfTools = import ./nix-files/tf-tools.nix { inherit pkgs system; inherit (inputs) drv-tools; };
+          tests = (import ./nix-files/tests.nix { inherit pkgs system; inherit (inputs) drv-tools; });
+
+          packages = tests // tfTools.packages;
+          devShells.default = mkShell {
+            packages = [ ];
+            commands =
+              mkRunCommands "test" tests
+              ++ mkRunCommands "tf-tools" tfTools.packages
+              ++ [{ name = "nix develop nix-dev/"; help = "Run project devshell"; }];
+          };
+        in
         {
-          inherit (flakes.source-flake) flake-utils nixpkgs formatter;
-          inherit (flakes) devshell drv-tools;
-          inherit flakes;
+          inherit (tfTools) lib;
+          inherit packages hcl devShells;
+          formatter = inputs.formatter.${system};
         };
-
-      outputs = outputs_ { } // { inputs = inputs_; outputs = outputs_; };
-
-      outputs_ =
-        inputs__:
-        let inputs = inputs_ // inputs__; in
-
-        inputs.flake-utils.lib.eachDefaultSystem
-          (system:
-          let
-            pkgs = inputs.nixpkgs.legacyPackages.${system};
-            inherit (inputs.devshell.lib.${system}) mkCommands mkRunCommands mkRunCommandsDir mkShell;
-
-            hcl = import ./nix-files/hcl.nix;
-            tfTools = import ./nix-files/tf-tools.nix { inherit pkgs system; inherit (inputs) drv-tools; };
-            tests = (import ./nix-files/tests.nix { inherit pkgs system; inherit (inputs) drv-tools; });
-
-            packages = tests // tfTools.packages;
-            devShells.default = mkShell {
-              packages = [ ];
-              commands =
-                mkRunCommands "test" tests
-                ++ mkRunCommands "tf-tools" tfTools.packages
-                ++ [{ name = "nix develop nix-dev/"; help = "Run project devshell"; }];
-            };
-          in
-          {
-            inherit (tfTools) lib;
-            inherit packages hcl devShells;
-          })
-        // {
-          inherit (inputs) formatter;
-        };
-    in
-    outputs;
+    };
 
   nixConfig = {
     extra-trusted-substituters = [
