@@ -6,6 +6,8 @@ This repo contains a `Nix` [eDSL](https://wiki.haskell.org/Embedded_domain_speci
 
 ## Related works
 
+- [Pulumi](https://www.pulumi.com/) - infrastructure as code
+- [Terraform CDK](https://developer.hashicorp.com/terraform/cdktf) - provision infrastructure using familiar programming languages
 - [terranix](https://github.com/terranix/terranix) - a popular tool that generates `terraform.json`
 - [nixform](https://github.com/brainrake/nixform) - another tool that generates `terraform.json` from a Nix eDSL
 - [xinomorf](https://github.com/kreisys/xinomorf) - a pretty outdated tool that generates terraform configurations
