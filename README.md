@@ -4,6 +4,11 @@ Writing in Terraform [configuration syntax](https://www.terraform.io/language/sy
 
 This repo contains a `Nix` [eDSL](https://wiki.haskell.org/Embedded_domain_specific_language) which can be translated into [HCL](https://github.com/hashicorp/hcl), a language used by [Terraform](https://www.terraform.io/). In other words, we can use the power of Nix to generate understandable HCL expressions.
 
+## Limitations
+
+- The main drawback of the current approach is that it doesn't use the NixOS module system.
+- There are [Unsupported constructs](#unsupported-constructs)
+
 ## Related works
 
 - [Pulumi](https://www.pulumi.com/) - infrastructure as code
@@ -17,7 +22,7 @@ This repo contains a `Nix` [eDSL](https://wiki.haskell.org/Embedded_domain_speci
 
 - [language definition](.nix/hcl.nix)
   - eDSL implementation
-  - expressions for Terraform's built-in functions (see [Limitations](#limitations))
+  - expressions for Terraform's built-in functions
   - anti-boilerplate functions
 - [expressions](.nix/test-data.nix) used in tests
 - [scripts](.nix/tf-tools.nix)
@@ -305,7 +310,7 @@ The author is not an experienced Terraform user. That's why, he may have missed 
 
 The author likes Nix and likes generating configs using this language.
 
-## Limitations
+## Unsupported constructs
 
 There are some HCL constructs that aren't yet supported. To name a few:
 
